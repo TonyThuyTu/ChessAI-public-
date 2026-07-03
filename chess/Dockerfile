@@ -10,7 +10,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 
 # Cài đặt các dependencies
-RUN pnpm install --frozen-lockfile
+RUN pnpm install 
 
 # Copy toàn bộ mã nguồn
 COPY . .

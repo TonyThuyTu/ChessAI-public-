@@ -1,16 +1,19 @@
 FROM node:22-alpine
 
-RUN npm install -g pnpm
+# Dùng corepack thay vì npm install -g pnpm — nhanh hơn, đúng version hơn
+RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
 
 WORKDIR /app
 
+# Copy package files trước để cache layer deps
 COPY package.json pnpm-lock.yaml ./
+RUN pnpm install
 
-# Thêm --config.allow-build để bypass lỗi
-RUN pnpm install --config.allow-build=@google/genai,esbuild,protobufjs
-
+# Copy source (không copy .env nhờ .dockerignore)
 COPY . .
 
-RUN pnpm run build
+RUN pnpm build
+
+EXPOSE 5000
 
 CMD ["node", "dist/index.js"]
