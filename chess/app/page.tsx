@@ -1,28 +1,35 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { gameService } from "@/services/gameServices";
 import axios from "axios";
 
-type Status = "playing" | "checkmate" | "draw" | "ai-thinking";
+type Status = "playing" | "checkmate" | "draw" | "stalemate" | "ai-thinking";
+type Winner = "player" | "ai" | null;
 
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+const SKIP_AFTER_SECONDS = 30;
 
 export default function ChessGame() {
-  // Chỉ quản lý giao diện qua chuỗi FEN và trạng thái trận đấu
   const [fen, setFen] = useState<string>(START_FEN);
   const [status, setStatus] = useState<Status>("playing");
-  const [lastAiReasoning, setLastAiReasoning] = useState<string>("");
+  const [winner, setWinner] = useState<Winner>(null);
   const [history, setHistory] = useState<string[]>([]);
+  const [capturedByWhite, setCapturedByWhite] = useState<string[]>([]);
+  const [capturedByBlack, setCapturedByBlack] = useState<string[]>([]);
+  const [lastAiMove, setLastAiMove] = useState<string>("");
   const [aiStatus, setAiStatus] = useState<"checking" | "online" | "offline">("checking");
+  const [skipTimer, setSkipTimer] = useState<number>(0);
+  const skipIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Kiểm tra Health Check của Backend Node.js
   const checkAiHealth = useCallback(async () => {
     setAiStatus("checking");
     try {
-      const res = await fetch("http://localhost:5000/api/health"); 
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/health`
+      );
       setAiStatus(res.ok ? "online" : "offline");
     } catch {
       setAiStatus("offline");
@@ -33,82 +40,120 @@ export default function ChessGame() {
     checkAiHealth();
   }, [checkAiHealth]);
 
-  // API mới của react-chessboard v5
+  // Xử lý response chung cho cả move và skip
+  const handleGameResponse = useCallback((data: Awaited<ReturnType<typeof gameService.sendMove>>) => {
+    setFen(data.fen);
+    setHistory(data.history);
+    setCapturedByWhite(data.capturedByWhite);
+    setCapturedByBlack(data.capturedByBlack);
+    setLastAiMove(data.aiMove || "");
+    setWinner(data.winner ?? null);
+
+    if (data.gameOver) {
+      if (data.reason === "checkmate") setStatus("checkmate");
+      else if (data.reason === "stalemate") setStatus("stalemate");
+      else setStatus("draw");
+    } else {
+      setStatus("playing");
+    }
+  }, []);
+
+  // Timer đếm ngược khi đến lượt player
+  useEffect(() => {
+    if (status === "playing" && aiStatus === "online") {
+      setSkipTimer(SKIP_AFTER_SECONDS);
+      skipIntervalRef.current = setInterval(() => {
+        setSkipTimer((t) => {
+          if (t <= 1) {
+            clearInterval(skipIntervalRef.current!);
+            return 0;
+          }
+          return t - 1;
+        });
+      }, 1000);
+    } else {
+      if (skipIntervalRef.current) clearInterval(skipIntervalRef.current);
+      setSkipTimer(0);
+    }
+
+    return () => {
+      if (skipIntervalRef.current) clearInterval(skipIntervalRef.current);
+    };
+  }, [status, aiStatus]);
+
+  // Auto skip khi timer về 0
+  useEffect(() => {
+    if (skipTimer === 0 && status === "playing" && aiStatus === "online") {
+      handleSkip();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [skipTimer]);
+
+  const handleSkip = useCallback(async () => {
+    if (status !== "playing" || aiStatus !== "online") return;
+    if (skipIntervalRef.current) clearInterval(skipIntervalRef.current);
+    setSkipTimer(0);
+    setStatus("ai-thinking");
+
+    try {
+      const data = await gameService.skipTurn();
+      handleGameResponse(data);
+    } catch (err) {
+      console.error(err);
+      setStatus("playing");
+    }
+  }, [status, aiStatus, handleGameResponse]);
+
   const onPieceDrop = useCallback(
-    ({
-      sourceSquare,
-      targetSquare,
-    }: {
+    ({ sourceSquare, targetSquare }: {
       sourceSquare: string;
       targetSquare: string | null;
     }) => {
-      if (aiStatus !== "online" || status === "ai-thinking" || status !== "playing") return false;
-      if (!targetSquare) return false; 
+      if (aiStatus !== "online" || status !== "playing") return false;
+      if (!targetSquare) return false;
 
-      // 🌟 KHỞI TẠO BẢN SAO TỪ CHUỖI FEN HIỆN TẠI (Không dùng state game cũ nữa)
       const currentChess = new Chess(fen);
-      
       try {
-        const move = currentChess.move({
-          from: sourceSquare,
-          to: targetSquare,
-          promotion: "q",
-        });
+        const move = currentChess.move({ from: sourceSquare, to: targetSquare, promotion: "q" });
         if (!move) return false;
       } catch {
-        return false; // Đi sai luật cờ -> tự nảy về chỗ cũ
+        return false;
       }
 
-      // 1. Cập nhật ngay lập tức nước đi của Player lên giao diện
-      const nextFen = currentChess.fen();
-      setFen(nextFen);
-      setHistory((h) => [...h, `[PLAYER]: ${sourceSquare} -> ${targetSquare}`]);
+      const prevFen = fen;
+      setFen(currentChess.fen());
       setStatus("ai-thinking");
 
-      // 2. Âm thầm gửi nước đi lên Backend bằng Axios
       gameService.sendMove({ from: sourceSquare, to: targetSquare })
-        .then((data) => {
-          // Backend trả về FEN tổng mới (gồm cả nước AI đi)
-          const aiChess = new Chess(data.fen);
-          setFen(data.fen); // Vẽ lại bàn cờ theo FEN chuẩn từ BE
-          setHistory(data.logs); // Đồng bộ log sạch từ BE
-          setLastAiReasoning(data.reasoning || "AI di chuyển thành công.");
-          
-          // Kiểm tra trạng thái trận đấu
-          if (aiChess.isCheckmate()) setStatus("checkmate");
-          else if (aiChess.isDraw()) setStatus("draw");
-          else setStatus("playing");
-        })
+        .then(handleGameResponse)
         .catch((err) => {
           console.error(err);
-          setLastAiReasoning("Lỗi hệ thống. Đang hoàn tác nước đi...");
-          
-          // Nếu BE lỗi, hoàn tác bàn cờ về FEN trước khi kéo quân
-          setFen(fen); 
+          setFen(prevFen);
           setStatus("playing");
-          
           if (axios.isAxiosError(err) && err.response?.status === 400) {
-             alert(err.response.data.error || "Nước đi không hợp lệ!");
+            alert(err.response.data.error || "Nước đi không hợp lệ!");
           }
         });
 
-      return true; 
+      return true;
     },
-    [fen, aiStatus, status] // 🌟 Dependency array giờ theo dõi sát chuỗi FEN hiện tại
+    [fen, aiStatus, status, handleGameResponse]
   );
 
   const resetGame = async () => {
     try {
+      if (skipIntervalRef.current) clearInterval(skipIntervalRef.current);
       setStatus("ai-thinking");
-      await gameService.resetServerGame(); // Reset trên Backend trước
-      
-      // Sau đó làm sạch toàn bộ State ở Frontend về mặc định
+      await gameService.resetServerGame();
       setFen(START_FEN);
       setStatus("playing");
+      setWinner(null);
       setHistory([]);
-      setLastAiReasoning("Trận đấu mới đã được thiết lập.");
-    } catch (e) {
-      console.error("Lỗi đồng bộ reset:", e);
+      setCapturedByWhite([]);
+      setCapturedByBlack([]);
+      setLastAiMove("");
+      setSkipTimer(0);
+    } catch {
       alert("Không thể kết nối server để tạo trận mới!");
       setStatus("playing");
     }
@@ -116,70 +161,153 @@ export default function ChessGame() {
 
   const statusMessage = useMemo(() => {
     switch (status) {
-      case "checkmate": return "Checkmate! Game over.";
-      case "draw": return "Draw / stalemate.";
-      case "ai-thinking": return "AI (Gemini) is thinking...";
-      default: return "Your move (White).";
+      case "checkmate":
+        return winner === "player" ? "Checkmate! Bạn thắng! 🎉" : "Checkmate! AI thắng. 🤖";
+      case "stalemate": return "Stalemate! Hoà cờ.";
+      case "draw":      return "Draw! Hoà cờ.";
+      case "ai-thinking": return "AI đang suy nghĩ...";
+      default:          return "Lượt của bạn (Trắng).";
     }
-  }, [status]);
+  }, [status, winner]);
 
-  const chessboardOptions = {
-    position: fen,
-    onPieceDrop,
-    allowDragging: status === "playing" && aiStatus === "online",
-    boardOrientation: "white" as const,
+  const isGameOver = status === "checkmate" || status === "draw" || status === "stalemate";
+
+  const pieceSymbol: Record<string, string> = {
+    P: "♙", N: "♘", B: "♗", R: "♖", Q: "♕", K: "♔",
+    p: "♟", n: "♞", b: "♝", r: "♜", q: "♛", k: "♚",
   };
+
+  const renderCaptured = (pieces: string[]) =>
+    pieces.map((p, i) => (
+      <span key={i} style={{ fontSize: 18 }}>
+        {pieceSymbol[p] ?? p}
+      </span>
+    ));
 
   return (
     <main style={{ maxWidth: 640, margin: "40px auto", fontFamily: "system-ui, sans-serif" }}>
-      <h1 style={{ marginBottom: 4 }}>Chess vs Gemini AI</h1>
+      <h1 style={{ marginBottom: 4 }}>Chess vs AI</h1>
 
+      {/* AI Status Badge */}
       <div style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-        padding: "4px 10px",
-        borderRadius: 99,
-        fontSize: 13,
-        marginBottom: 8,
+        display: "inline-flex", alignItems: "center", gap: 6,
+        padding: "4px 10px", borderRadius: 99, fontSize: 13, marginBottom: 8,
         background: aiStatus === "online" ? "#dcfce7" : aiStatus === "offline" ? "#fee2e2" : "#f3f4f6",
         color: aiStatus === "online" ? "#16a34a" : aiStatus === "offline" ? "#dc2626" : "#6b7280",
       }}>
         <span style={{
-          width: 8,
-          height: 8,
-          borderRadius: "50%",
+          width: 8, height: 8, borderRadius: "50%", display: "inline-block",
           background: aiStatus === "online" ? "#16a34a" : aiStatus === "offline" ? "#dc2626" : "#9ca3af",
-          display: "inline-block",
         }} />
-        {aiStatus === "online" && "Gemini AI Ready (Node.js BE)"}
-        {aiStatus === "offline" && "Server Offline — hãy khởi chạy backend Node.js"}
-        {aiStatus === "checking" && "Checking AI..."}
+        {aiStatus === "online" && "AI Ready"}
+        {aiStatus === "offline" && "Server Offline — hãy khởi chạy backend"}
+        {aiStatus === "checking" && "Đang kiểm tra..."}
         {aiStatus === "offline" && (
-          <button onClick={checkAiHealth} style={{ marginLeft: 6, fontSize: 12, padding: "2px 8px", cursor: "pointer", border: "1px solid #dc2626", borderRadius: 6, background: "transparent", color: "#dc2626" }}>
+          <button onClick={checkAiHealth} style={{
+            marginLeft: 6, fontSize: 12, padding: "2px 8px", cursor: "pointer",
+            border: "1px solid #dc2626", borderRadius: 6, background: "transparent", color: "#dc2626",
+          }}>
             Retry
           </button>
         )}
       </div>
 
-      <p style={{ color: "#666", marginTop: 0 }}>{statusMessage}</p>
+      {/* Status message */}
+      <p style={{
+        color: isGameOver ? "#b91c1c" : status === "ai-thinking" ? "#d97706" : "#555",
+        fontWeight: isGameOver ? 600 : 400,
+        marginTop: 0,
+      }}>
+        {statusMessage}
+      </p>
 
-      <div style={{ width: 560 }}>
-        <Chessboard options={chessboardOptions} />
+      {/* Quân đen bị trắng ăn */}
+      <div style={{ minHeight: 28, marginBottom: 4 }}>
+        {renderCaptured(capturedByWhite)}
       </div>
 
-      <div style={{ marginTop: 16, padding: 12, background: "#f5f5f5", borderRadius: 8 }}>
-        <strong>AI reasoning & Logs:</strong>
-        <p style={{ margin: "4px 0 0", fontSize: "14px", color: "#333", whiteSpace: "pre-line" }}>
-          {lastAiReasoning || "—"}
+      {/* Bàn cờ */}
+      <div style={{ width: 560 }}>
+        <Chessboard options={{
+          position: fen,
+          onPieceDrop,
+          allowDragging: status === "playing" && aiStatus === "online",
+          boardOrientation: "white",
+        }} />
+      </div>
+
+      {/* Quân trắng bị đen ăn */}
+      <div style={{ minHeight: 28, marginTop: 4 }}>
+        {renderCaptured(capturedByBlack)}
+      </div>
+
+      {/* AI move info */}
+      <div style={{ marginTop: 12, padding: 12, background: "#f5f5f5", borderRadius: 8, fontSize: 14 }}>
+        <p style={{ margin: 0 }}>
+          <strong>AI vừa đi:</strong> {lastAiMove || "—"}
         </p>
       </div>
 
+      {/* Lịch sử nước đi */}
+      <div style={{ marginTop: 8, padding: 12, background: "#f5f5f5", borderRadius: 8, fontSize: 13 }}>
+        <strong>Lịch sử ({history.length} nước):</strong>
+        <div style={{
+          marginTop: 6,
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))",
+          gap: 2,
+        }}>
+          {history.map((move, i) => (
+            <span key={i} style={{
+              padding: "2px 6px", borderRadius: 4,
+              background: i % 2 === 0 ? "#e5e7eb" : "#d1d5db",
+              fontSize: 12,
+            }}>
+              {Math.floor(i / 2) + 1}{i % 2 === 0 ? "." : "..."} {move}
+            </span>
+          ))}
+        </div>
+        {history.length === 0 && (
+          <p style={{ margin: "4px 0 0", color: "#9ca3af" }}>Chưa có nước đi nào.</p>
+        )}
+      </div>
+
+      {/* Controls */}
       <div style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "center" }}>
-        <button onClick={resetGame} style={{ padding: "8px 16px", cursor: "pointer", borderRadius: 4, border: "1px solid #ccc" }}>
+        <button
+          onClick={resetGame}
+          disabled={status === "ai-thinking"}
+          style={{
+            padding: "8px 16px",
+            cursor: status === "ai-thinking" ? "not-allowed" : "pointer",
+            borderRadius: 4, border: "1px solid #ccc",
+            opacity: status === "ai-thinking" ? 0.5 : 1,
+          }}
+        >
           New Game
         </button>
-        <span style={{ color: "#888", fontSize: 14 }}>{history.length} nước đi đã ghi nhận</span>
+
+        {/* Skip button — chỉ hiện khi đến lượt player */}
+        {status === "playing" && aiStatus === "online" && (
+          <button
+            onClick={handleSkip}
+            style={{
+              padding: "8px 16px", cursor: "pointer", borderRadius: 4, fontWeight: 600,
+              border: `1px solid ${skipTimer <= 10 ? "#ef4444" : "#f59e0b"}`,
+              color: skipTimer <= 10 ? "#ef4444" : "#d97706",
+              transition: "all 0.3s",
+            }}
+          >
+            Skip ({skipTimer}s)
+          </button>
+        )}
+
+        <button
+          onClick={checkAiHealth}
+          style={{ padding: "8px 16px", cursor: "pointer", borderRadius: 4, border: "1px solid #ccc" }}
+        >
+          Check Server
+        </button>
       </div>
     </main>
   );

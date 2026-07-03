@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: chess-backend
+    ports:
+      - "5000:5000"
+    # Dùng biến môi trường từ file .env của backend
+    env_file:
+      - ./backend/.env
+    environment:
+      - PORT=5000
+    restart: unless-stopped
+
+  chess-frontend:
+    build:
+      context: ./chess
+      dockerfile: Dockerfile
+    container_name: chess-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped

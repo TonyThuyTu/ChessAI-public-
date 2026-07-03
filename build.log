@@ -1,0 +1,200 @@
+--progress is a global compose flag, better use `docker compose --progress xx build ...
+time="2026-07-03T08:32:40+07:00" level=warning msg="/home/tony/projects/ChessAI-public-/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Image chessai-public--backend Building 
+ Image chessai-public--chess-frontend Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.10kB done
+#1 DONE 0.0s
+
+#2 [backend internal] load build definition from Dockerfile
+#2 transferring dockerfile: 433B done
+#2 DONE 0.0s
+
+#3 [chess-frontend internal] load build definition from Dockerfile
+#3 transferring dockerfile: 448B done
+#3 DONE 0.0s
+
+#4 [auth] library/node:pull token for registry-1.docker.io
+#4 DONE 0.0s
+
+#5 [chess-frontend internal] load metadata for docker.io/library/node:22-alpine
+#5 DONE 1.6s
+
+#6 [chess-frontend internal] load .dockerignore
+#6 transferring context: 132B done
+#6 DONE 0.0s
+
+#7 [backend internal] load .dockerignore
+#7 transferring context: 73B done
+#7 DONE 0.0s
+
+#8 [backend 1/7] FROM docker.io/library/node:22-alpine@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2
+#8 resolve docker.io/library/node:22-alpine@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2 0.0s done
+#8 CACHED
+
+#9 [chess-frontend internal] load build context
+#9 transferring context: 928B done
+#9 DONE 0.0s
+
+#10 [backend internal] load build context
+#10 transferring context: 899B done
+#10 DONE 0.0s
+
+#11 [chess-frontend 2/7] RUN npm install -g pnpm
+#11 3.191 
+#11 3.191 added 1 package in 3s
+#11 3.191 
+#11 3.191 1 package is looking for funding
+#11 3.191   run `npm fund` for details
+#11 3.194 npm notice
+#11 3.194 npm notice New major version of npm available! 10.9.8 -> 11.18.0
+#11 3.194 npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.18.0
+#11 3.194 npm notice To update run: npm install -g npm@11.18.0
+#11 3.194 npm notice
+#11 DONE 3.3s
+
+#12 [chess-frontend 3/7] WORKDIR /app
+#12 DONE 0.0s
+
+#13 [backend 4/7] COPY package.json pnpm-lock.yaml ./
+#13 DONE 0.1s
+
+#14 [chess-frontend 4/7] COPY package.json pnpm-lock.yaml ./
+#14 DONE 0.1s
+
+#15 [chess-frontend 5/7] RUN pnpm install --frozen-lockfile
+#15 1.232 ? Verifying lockfile against supply-chain policies (447 entries)...
+#15 1.250 Lockfile is up to date, resolution step is skipped
+#15 1.451 Progress: resolved 1, reused 0, downloaded 0, added 0
+#15 1.710 Packages: +370
+#15 1.710 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#15 2.469 Progress: resolved 370, reused 0, downloaded 0, added 0
+#15 3.472 Progress: resolved 370, reused 0, downloaded 53, added 52
+#15 4.472 Progress: resolved 370, reused 0, downloaded 67, added 67
+#15 5.470 Progress: resolved 370, reused 0, downloaded 70, added 70
+#15 5.487 [WARN] Tarball download average speed 3 KiB/s (size 6 KiB) is below 50 KiB/s: https://registry.npmjs.org/@babel/compat-data/-/compat-data-7.29.7.tgz (GET)
+#15 6.470 Progress: resolved 370, reused 0, downloaded 83, added 83
+#15 6.762 [WARN] Tarball download average speed 31 KiB/s (size 110 KiB) is below 50 KiB/s: https://registry.npmjs.org/@babel/generator/-/generator-7.29.7.tgz (GET)
+#15 7.261 [WARN] Tarball download average speed 35 KiB/s (size 116 KiB) is below 50 KiB/s: https://registry.npmjs.org/sharp/-/sharp-0.34.5.tgz (GET)
+#15 7.470 Progress: resolved 370, reused 0, downloaded 99, added 99
+#15 7.847 [WARN] Tarball download average speed 36 KiB/s (size 79 KiB) is below 50 KiB/s: https://registry.npmjs.org/react-chessboard/-/react-chessboard-5.10.0.tgz (GET)
+#15 8.471 Progress: resolved 370, reused 0, downloaded 125, added 125
+#15 8.929 [WARN] Tarball download average speed 9 KiB/s (size 49 KiB) is below 50 KiB/s: https://registry.npmjs.org/json5/-/json5-2.2.3.tgz (GET)
+#15 9.471 Progress: resolved 370, reused 0, downloaded 155, added 155
+#15 9.659 [WARN] Tarball download average speed 46 KiB/s (size 294 KiB) is below 50 KiB/s: https://registry.npmjs.org/@babel/types/-/types-7.29.7.tgz (GET)
+#15 9.738 [WARN] Tarball download average speed 14 KiB/s (size 20 KiB) is below 50 KiB/s: https://registry.npmjs.org/undici-types/-/undici-types-6.21.0.tgz (GET)
+#15 9.849 [WARN] Tarball download average speed 41 KiB/s (size 84 KiB) is below 50 KiB/s: https://registry.npmjs.org/lightningcss/-/lightningcss-1.32.0.tgz (GET)
+#15 ...
+
+#16 [backend 5/7] RUN pnpm install
+#16 1.219 ? Verifying lockfile against supply-chain policies (149 entries)...
+#16 1.235 Lockfile is up to date, resolution step is skipped
+#16 1.332 Progress: resolved 1, reused 0, downloaded 0, added 0
+#16 1.433 Packages: +123
+#16 1.433 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#16 2.335 Progress: resolved 123, reused 0, downloaded 0, added 0
+#16 3.343 Progress: resolved 123, reused 0, downloaded 55, added 54
+#16 4.344 Progress: resolved 123, reused 0, downloaded 80, added 80
+#16 5.343 Progress: resolved 123, reused 0, downloaded 81, added 81
+#16 5.642 [WARN] Tarball download average speed 6 KiB/s (size 6 KiB) is below 50 KiB/s: https://registry.npmjs.org/content-disposition/-/content-disposition-1.1.0.tgz (GET)
+#16 6.343 Progress: resolved 123, reused 0, downloaded 101, added 101
+#16 7.344 Progress: resolved 123, reused 0, downloaded 113, added 113
+#16 8.345 Progress: resolved 123, reused 0, downloaded 117, added 117
+#16 9.346 Progress: resolved 123, reused 0, downloaded 118, added 118
+#16 10.35 Progress: resolved 123, reused 0, downloaded 119, added 119
+#16 ...
+
+#15 [chess-frontend 5/7] RUN pnpm install --frozen-lockfile
+#15 10.47 Progress: resolved 370, reused 0, downloaded 210, added 210
+#15 11.47 Progress: resolved 370, reused 0, downloaded 259, added 258
+#15 12.15 [WARN] Tarball download average speed 31 KiB/s (size 132 KiB) is below 50 KiB/s: https://registry.npmjs.org/@eslint/eslintrc/-/eslintrc-3.3.5.tgz (GET)
+#15 12.47 Progress: resolved 370, reused 0, downloaded 319, added 319
+#15 13.11 [WARN] Request took 10361ms: https://registry.npmjs.org/@next%2Fswc-win32-arm64-msvc
+#15 13.39 [WARN] Request took 10100ms: https://registry.npmjs.org/@typescript-eslint%2Futils
+#15 13.47 [WARN] Request took 10134ms: https://registry.npmjs.org/@typescript-eslint%2Fvisitor-keys
+#15 13.50 Progress: resolved 370, reused 0, downloaded 351, added 351
+#15 14.50 Progress: resolved 370, reused 0, downloaded 358, added 358
+#15 14.64 [WARN] Request took 11811ms: https://registry.npmjs.org/@tailwindcss%2Foxide-freebsd-x64
+#15 15.09 [WARN] Request took 12195ms: https://registry.npmjs.org/@types%2Fnode
+#15 15.50 Progress: resolved 370, reused 0, downloaded 361, added 361
+#15 16.50 Progress: resolved 370, reused 0, downloaded 362, added 362
+#15 17.63 Progress: resolved 370, reused 0, downloaded 363, added 362
+#15 18.01 [WARN] Request took 15468ms: https://registry.npmjs.org/@next%2Fswc-darwin-x64
+#15 18.05 [WARN] Request took 15532ms: https://registry.npmjs.org/@next%2Feslint-plugin-next
+#15 18.20 [WARN] Tarball download average speed 27 KiB/s (size 130 KiB) is below 50 KiB/s: https://registry.npmjs.org/eslint-plugin-jsx-a11y/-/eslint-plugin-jsx-a11y-6.10.2.tgz (GET)
+#15 18.63 Progress: resolved 370, reused 0, downloaded 366, added 366
+#15 19.55 [WARN] Request took 16623ms: https://registry.npmjs.org/@typescript-eslint%2Feslint-plugin
+#15 19.63 Progress: resolved 370, reused 0, downloaded 367, added 367
+#15 20.65 [WARN] Request took 17403ms: https://registry.npmjs.org/@typescript-eslint%2Ftype-utils
+#15 ...
+
+#16 [backend 5/7] RUN pnpm install
+#16 11.35 Progress: resolved 123, reused 0, downloaded 120, added 120
+#16 13.48 [WARN] Request took 11174ms: https://registry.npmjs.org/esbuild
+#16 14.81 Progress: resolved 123, reused 0, downloaded 121, added 120
+#16 15.23 [WARN] Request took 11309ms: https://registry.npmjs.org/typescript
+#16 15.27 ✓ Lockfile passes supply-chain policies (149 entries in 14s)
+#16 15.81 Progress: resolved 123, reused 0, downloaded 121, added 121
+#16 ...
+
+#15 [chess-frontend 5/7] RUN pnpm install --frozen-lockfile
+#15 22.00 [WARN] Request took 19346ms: https://registry.npmjs.org/@next%2Fswc-linux-arm64-gnu
+#15 22.99 Progress: resolved 370, reused 0, downloaded 368, added 367
+#15 ...
+
+#16 [backend 5/7] RUN pnpm install
+#16 22.83 Progress: resolved 123, reused 0, downloaded 122, added 121
+#16 23.07 Progress: resolved 123, reused 0, downloaded 123, added 123, done
+#16 23.16 
+#16 23.16 dependencies:
+#16 23.16 + @google/genai 2.10.0
+#16 23.16 + chess.js 1.4.0
+#16 23.16 + cors 2.8.6
+#16 23.16 + dotenv 17.4.2
+#16 23.16 + express 5.2.1
+#16 23.16 
+#16 23.16 devDependencies:
+#16 23.16 + @types/cors 2.8.19
+#16 23.16 + @types/express 5.0.6
+#16 23.16 + @types/node 26.1.0
+#16 23.16 + tsx 4.22.4
+#16 23.16 + typescript 6.0.3
+#16 23.16 
+#16 23.23 [ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: @google/genai@2.10.0, esbuild@0.28.1, protobufjs@7.6.4
+#16 23.23 
+#16 23.23 Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.
+#16 ERROR: process "/bin/sh -c pnpm install" did not complete successfully: exit code: 1
+
+#15 [chess-frontend 5/7] RUN pnpm install --frozen-lockfile
+#15 CANCELED
+------
+ > [backend 5/7] RUN pnpm install:
+23.16 devDependencies:
+23.16 + @types/cors 2.8.19
+23.16 + @types/express 5.0.6
+23.16 + @types/node 26.1.0
+23.16 + tsx 4.22.4
+23.16 + typescript 6.0.3
+23.16 
+23.23 [ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: @google/genai@2.10.0, esbuild@0.28.1, protobufjs@7.6.4
+23.23 
+23.23 Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.
+------
+Dockerfile:13
+
+--------------------
+
+  11 |     
+
+  12 |     # Cài đặt các dependencies
+
+  13 | >>> RUN pnpm install
+
+  14 |     
+
+  15 |     # Copy toàn bộ source code
+
+--------------------
+
+target backend: failed to solve: process "/bin/sh -c pnpm install" did not complete successfully: exit code: 1
+

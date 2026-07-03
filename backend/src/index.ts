@@ -1,33 +1,29 @@
-import express from 'express';
 import dotenv from 'dotenv';
-import cors from 'cors';
-import { GameController } from './controllers/GameController.js';
+dotenv.config(); // ← PHẢI trên đầu tiên
 
-dotenv.config();
+import express from 'express';
+import cors from 'cors';
+import gameRoutes from './Routes/game.routes.js';
+import { httpLogger, errorLogger } from './middlewares/logger.middleware.js';
 
 const app = express();
 
-const gameController = new GameController();
-
 app.use(cors());
 app.use(express.json());
+app.use(httpLogger);
 
-// 1. THÊM ROUTE HEALTH CHECK NÀY VÀO BACKEND
-app.get('/api/health', (req, res) => {
-    // Trả về trạng thái 200 OK để Frontend biết Server Node.js đang online
+app.get('/api/health', (_req, res) => {
     res.status(200).json({ status: 'online', timestamp: new Date() });
 });
 
-// 2. Thêm một route phụ để xử lý nút "New Game" bên Frontend (nếu bạn muốn đồng bộ reset bàn cờ)
-app.post('/api/game/reset', (req, res) => {
-    // Logic reset bàn cờ trên server của bạn nếu cần
-    res.status(200).json({ message: 'Bàn cờ đã được khởi tạo lại thành công!' });
+app.use('/api/game', gameRoutes); // ← thêm / ở đầu
+
+app.use(errorLogger);
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    res.status(500).json({ error: err.message || 'Internal server error' });
 });
 
-app.post('/api/game/move', gameController.handleMove);
-
-// Khởi chạy server
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`[server]: Server đang chạy thành công tại http://localhost:${PORT}`);
+    console.log(`\x1b[32m[SERVER]\x1b[0m Running at http://localhost:${PORT}`);
 });

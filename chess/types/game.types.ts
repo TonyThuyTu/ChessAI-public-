@@ -1,11 +1,15 @@
 export interface MoveRequest {
-  from: string; // Ví dụ: "e2"
-  to: string;   // Ví dụ: "e4"
+  from: string;
+  to: string;
 }
 
 export interface GameResponse {
-  fen: string;       // Chuỗi trạng thái bàn cờ mới
-  gameOver: boolean; // Trận đấu kết thúc chưa
-  message?: string;  // Thông báo kết quả (nếu có)
-  logs: string[];    // Danh sách log trận đấu từ BE
+  fen: string;
+  gameOver: boolean;
+  reason: string | null;        // 'checkmate' | 'draw' | 'stalemate' | ...
+  winner?: 'player' | 'ai' | null;
+  history: string[];            // ['e4', 'e5', 'Nf3', ...]
+  capturedByWhite: string[];    // quân đen bị trắng ăn
+  capturedByBlack: string[];    // quân trắng bị đen ăn
+  aiMove: string;               // nước AI vừa đi dạng SAN
 }

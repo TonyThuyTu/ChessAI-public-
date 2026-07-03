@@ -6,28 +6,41 @@ export interface MoveRequest {
 }
 
 export interface GameResponse {
-  fen: string;       // Chuỗi FEN mới sau khi cả người chơi và AI đã đi
+  fen: string;
   gameOver: boolean;
-  logs: string[];    // Log hiển thị
-  reasoning?: string; // Đoạn tư duy của Gemini (nếu có)
+  reason: string | null;           // 'checkmate' | 'draw' | 'stalemate' | ...
+  winner?: 'player' | 'ai' | null;
+  history: string[];               // Lịch sử SAN: ['e4', 'e5', 'Nf3', ...]
+  capturedByWhite: string[];       // Quân đen bị trắng ăn: ['p', 'n', ...]
+  capturedByBlack: string[];       // Quân trắng bị đen ăn
+  aiMove: string;                  // Nước AI vừa đi dạng SAN
+  skipped?: boolean;
+}
+
+export interface ResetResponse {
+  message: string;
+  fen: string;
 }
 
 const gameApiClient = axios.create({
-  baseURL: "http://localhost:5000/api", // Cổng server Node.js MVC của bạn
-  timeout: 15000, // Đợi tối đa 15 giây phòng trường hợp AI Proxy phản hồi chậm
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
+  timeout: 60000, // AI proxy có thể chậm, để 60s
   headers: { "Content-Type": "application/json" },
 });
 
 export const gameService = {
-  // Gửi nước đi lên BE và nhận về kết quả thế trận mới
   sendMove: async (move: MoveRequest): Promise<GameResponse> => {
     const response = await gameApiClient.post<GameResponse>("/game/move", move);
     return response.data;
   },
-  
-  // Reset trạng thái bàn cờ trên Server
-  resetServerGame: async (): Promise<{ message: string; fen: string }> => {
-    const response = await gameApiClient.post("/game/reset");
+
+  skipTurn: async (): Promise<GameResponse> => {
+    const response = await gameApiClient.post<GameResponse>("/game/skip");
     return response.data;
-  }
+  },
+
+  resetServerGame: async (): Promise<ResetResponse> => {
+    const response = await gameApiClient.post<ResetResponse>("/game/reset");
+    return response.data;
+  },
 };
