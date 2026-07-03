@@ -4,6 +4,7 @@ interface GameContext {
     fen: string;
     legalMoves: string[];
     moveHistory: string[];
+    boardHistory: number[][][];
     capturedByWhite: string[];
     capturedByBlack: string[];
 }
@@ -25,6 +26,7 @@ export class AIService {
             fen,
             legalMoves = [],
             moveHistory = [],
+           
             capturedByWhite = [],
             capturedByBlack = [],
         } = context;

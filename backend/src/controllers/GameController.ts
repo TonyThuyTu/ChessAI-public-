@@ -59,6 +59,7 @@ export class GameController {
                 fen: this.gameRoom.getFen(),
                 legalMoves,
                 moveHistory: this.gameRoom.getHistory(),
+                boardHistory: this.gameRoom.getBoardHistory(),
                 capturedByWhite: this.gameRoom.capturedByWhite,
                 capturedByBlack: this.gameRoom.capturedByBlack,
             });

@@ -1,14 +1,30 @@
 import { Chess } from 'chess.js';
 
+const PIECE_VALUE: Record<string, number> = {
+    p: 1, n: 2, b: 3, r: 4, q: 5, k: 6,
+};
+
 export class GameRoom {
     public chess: Chess;
-    public capturedByWhite: string[]; // Quân đen bị trắng ăn
-    public capturedByBlack: string[]; // Quân trắng bị đen ăn
+    public capturedByWhite: string[];
+    public capturedByBlack: string[];
+    private boardHistory: number[][][];
 
     constructor() {
         this.chess = new Chess();
         this.capturedByWhite = [];
         this.capturedByBlack = [];
+        this.boardHistory = [this.snapshotBoard()]; // lưu initial state
+    }
+
+    private snapshotBoard(): number[][] {
+        return this.chess.board().map(row =>
+            row.map(cell => {
+                if (!cell) return 0;
+                const val = PIECE_VALUE[cell.type];
+                return cell.color === 'w' ? val : -val;
+            })
+        );
     }
 
     public getFen(): string {
@@ -16,7 +32,11 @@ export class GameRoom {
     }
 
     public getHistory(): string[] {
-        return this.chess.history(); // SAN notation, chess.js tự track
+        return this.chess.history();
+    }
+
+    public getBoardHistory(): number[][][] {
+        return this.boardHistory;
     }
 
     public makeMove(from: string, to: string, promotion = 'q'): boolean {
@@ -24,7 +44,6 @@ export class GameRoom {
             const result = this.chess.move({ from, to, promotion });
             if (!result) return false;
 
-            // Track quân bị ăn
             if (result.captured) {
                 const piece = result.captured.toUpperCase();
                 if (result.color === 'w') {
@@ -34,6 +53,7 @@ export class GameRoom {
                 }
             }
 
+            this.boardHistory.push(this.snapshotBoard());
             return true;
         } catch {
             return false;
@@ -54,6 +74,7 @@ export class GameRoom {
                 }
             }
 
+            this.boardHistory.push(this.snapshotBoard());
             return true;
         } catch {
             return false;
